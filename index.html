@@ -1,0 +1,60 @@
+﻿<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZENIX - Acces officiel</title>
+  <meta name="description" content="Site officiel pour retrouver l'adresse active de Zenix." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="config.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">ZENIX</p>
+      <h1>ACCES OFFICIEL</h1>
+      <p class="lead">Verifiez l'etat du site et retrouvez l'URL officielle en un clic.</p>
+    </header>
+
+    <section class="active-link">
+      <div class="active-head">
+        <span class="chip">Lien actif du moment</span>
+        <span class="status" id="lastUpdated">Lien verifie</span>
+      </div>
+      <div class="active-url" id="activeUrl">https://zenix.best</div>
+      <a class="btn" id="activeBtn" href="https://zenix.best" target="_blank" rel="noopener">🎬 ACCEDER AU STREAMING</a>
+      <p class="hint">Lien mis a jour manuellement si changement de domaine.</p>
+    </section>
+
+    <section class="info-grid">
+      <article class="info-card">
+        <h2>Pourquoi ce site ?</h2>
+        <p>
+          Zenix.lol est la vitrine officielle qui indique toujours l'adresse active du streaming.
+          Ajoute cette page a tes favoris pour retrouver le bon lien instantanement.
+        </p>
+      </article>
+      <article class="info-card">
+        <h2>En cas de blocage</h2>
+        <p>
+          Si https://zenix.best ne fonctionne plus :
+        </p>
+        <ul>
+          <li>Reviens sur zenix.lol dans 24-48h.</li>
+          <li>Le nouveau lien sera affiche ici.</li>
+          <li>Ajoute zenix.lol a tes favoris.</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>ZENIX.LOL · Site officiel d'acces</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
