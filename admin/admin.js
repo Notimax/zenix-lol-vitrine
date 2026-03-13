@@ -1,4 +1,5 @@
-﻿const API_URL = "https://zenix.best/api/backup-config";
+const API_URL = "https://zenix.best/api/backup-config";
+const STORAGE_KEY = "zenix_lol_admin_pw";
 
 const refs = {
   currentUrl: document.getElementById("currentUrl"),
@@ -9,12 +10,43 @@ const refs = {
   newUrl: document.getElementById("newUrl"),
   status: document.getElementById("formStatus"),
   refreshBtn: document.getElementById("refreshBtn"),
+  loginCard: document.getElementById("loginCard"),
+  loginForm: document.getElementById("loginForm"),
+  loginStatus: document.getElementById("loginStatus"),
+  panel: document.getElementById("adminPanel"),
+  logoutBtn: document.getElementById("logoutBtn"),
 };
+
+function setAuthed(authed) {
+  if (refs.loginCard) refs.loginCard.hidden = authed;
+  if (refs.panel) refs.panel.hidden = !authed;
+  if (refs.logoutBtn) refs.logoutBtn.hidden = !authed;
+}
+
+function getStoredPassword() {
+  return sessionStorage.getItem(STORAGE_KEY) || "";
+}
+
+function storePassword(value) {
+  if (value) {
+    sessionStorage.setItem(STORAGE_KEY, value);
+  }
+}
+
+function clearStoredPassword() {
+  sessionStorage.removeItem(STORAGE_KEY);
+}
 
 function setStatus(text, isError = false) {
   if (!refs.status) return;
   refs.status.textContent = text || "";
   refs.status.style.color = isError ? "#fca5a5" : "rgba(226, 232, 240, 0.7)";
+}
+
+function setLoginStatus(text, isError = false) {
+  if (!refs.loginStatus) return;
+  refs.loginStatus.textContent = text || "";
+  refs.loginStatus.style.color = isError ? "#fca5a5" : "rgba(226, 232, 240, 0.7)";
 }
 
 function renderData(data) {
@@ -55,12 +87,36 @@ async function loadConfig() {
   }
 }
 
-async function submitConfig(event) {
+function handleLogin(event) {
   event.preventDefault();
   const password = String(refs.password?.value || "").trim();
+  if (!password) {
+    setLoginStatus("Mot de passe requis.", true);
+    return;
+  }
+  storePassword(password);
+  if (refs.password) refs.password.value = "";
+  setLoginStatus("");
+  setAuthed(true);
+  loadConfig();
+}
+
+function handleLogout() {
+  clearStoredPassword();
+  setAuthed(false);
+}
+
+async function submitConfig(event) {
+  event.preventDefault();
+  const password = String(getStoredPassword() || "").trim();
   const url = String(refs.newUrl?.value || "").trim();
-  if (!password || !url) {
-    setStatus("Mot de passe et URL obligatoires.", true);
+  if (!password) {
+    setStatus("Mot de passe requis.", true);
+    setAuthed(false);
+    return;
+  }
+  if (!url) {
+    setStatus("URL obligatoire.", true);
     return;
   }
   setStatus("Mise a jour en cours...");
@@ -74,6 +130,10 @@ async function submitConfig(event) {
     });
     const payload = await res.json().catch(() => ({}));
     if (!res.ok || !payload?.ok) {
+      if (res.status === 401) {
+        clearStoredPassword();
+        setAuthed(false);
+      }
       setStatus(payload?.error || "Mise a jour impossible", true);
       return;
     }
@@ -90,8 +150,19 @@ async function submitConfig(event) {
 if (refs.form) {
   refs.form.addEventListener("submit", submitConfig);
 }
+if (refs.loginForm) {
+  refs.loginForm.addEventListener("submit", handleLogin);
+}
 if (refs.refreshBtn) {
   refs.refreshBtn.addEventListener("click", loadConfig);
 }
+if (refs.logoutBtn) {
+  refs.logoutBtn.addEventListener("click", handleLogout);
+}
 
-loadConfig();
+if (getStoredPassword()) {
+  setAuthed(true);
+  loadConfig();
+} else {
+  setAuthed(false);
+}

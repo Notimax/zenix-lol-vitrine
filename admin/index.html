@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="../styles.css" />
   <style>
     .admin-shell { width: min(880px, 92vw); margin: 40px auto; display: grid; gap: 20px; }
+    .admin-grid { display: grid; gap: 20px; }
     .admin-card { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 18px; padding: 20px; box-shadow: var(--shadow); }
     .admin-card h2 { margin-bottom: 10px; font-size: 1.1rem; }
     .admin-row { display: grid; gap: 12px; }
@@ -29,34 +30,51 @@
       <p class="eyebrow">ZENIX.LOL</p>
       <h1>ADMIN BACKUP</h1>
       <p class="lead">Mets a jour le lien actif affiche sur zenix.lol.</p>
+      <div class="admin-actions">
+        <button class="btn" type="button" id="logoutBtn" hidden>Changer le mot de passe</button>
+      </div>
     </header>
 
-    <section class="admin-card">
-      <h2>Lien actuel</h2>
-      <div class="admin-links">
-        <span class="current" id="currentUrl">...</span>
-        <span class="previous" id="previousUrl" hidden>...</span>
-      </div>
-      <p class="admin-status" id="lastUpdated">Chargement...</p>
-    </section>
-
-    <section class="admin-card">
-      <h2>Mettre a jour l'URL</h2>
-      <form id="backupForm" class="admin-row">
+    <section class="admin-card" id="loginCard">
+      <h2>Connexion</h2>
+      <form id="loginForm" class="admin-row">
         <div>
           <label for="adminPassword">Mot de passe admin (meme que zenix.best)</label>
           <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Mot de passe" required />
         </div>
-        <div>
-          <label for="newUrl">Nouvelle URL active</label>
-          <input id="newUrl" type="url" placeholder="https://nouveau-domaine.xyz" required />
-        </div>
         <div class="admin-actions">
-          <button class="btn" type="submit">Mettre a jour</button>
-          <button class="btn" type="button" id="refreshBtn">Recharger</button>
+          <button class="btn" type="submit">Acceder</button>
         </div>
-        <p class="admin-status" id="formStatus"></p>
+        <p class="admin-status" id="loginStatus"></p>
       </form>
+    </section>
+
+    <section id="adminPanel" hidden>
+      <div class="admin-grid">
+        <section class="admin-card">
+          <h2>Lien actuel</h2>
+          <div class="admin-links">
+            <span class="current" id="currentUrl">...</span>
+            <span class="previous" id="previousUrl" hidden>...</span>
+          </div>
+          <p class="admin-status" id="lastUpdated">Chargement...</p>
+        </section>
+
+        <section class="admin-card">
+          <h2>Mettre a jour l'URL</h2>
+          <form id="backupForm" class="admin-row">
+            <div>
+              <label for="newUrl">Nouvelle URL active</label>
+              <input id="newUrl" type="url" placeholder="https://nouveau-domaine.xyz" required />
+            </div>
+            <div class="admin-actions">
+              <button class="btn" type="submit">Mettre a jour</button>
+              <button class="btn" type="button" id="refreshBtn">Recharger</button>
+            </div>
+            <p class="admin-status" id="formStatus"></p>
+          </form>
+        </section>
+      </div>
     </section>
   </main>
 
