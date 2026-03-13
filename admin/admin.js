@@ -46,7 +46,7 @@ function setStatus(text, isError = false) {
 function setLoginStatus(text, isError = false) {
   if (!refs.loginStatus) return;
   refs.loginStatus.textContent = text || "";
-  refs.loginStatus.style.color = isError ? "#fca5a5" : "rgba(226, 232, 240, 0.7)";
+  refs.loginStatus.style.color = isError ? "#fca5a5" : "#86efac";
 }
 
 function renderData(data) {
@@ -87,18 +87,44 @@ async function loadConfig() {
   }
 }
 
-function handleLogin(event) {
+async function handleLogin(event) {
   event.preventDefault();
   const password = String(refs.password?.value || "").trim();
   if (!password) {
     setLoginStatus("Mot de passe requis.", true);
     return;
   }
-  storePassword(password);
-  if (refs.password) refs.password.value = "";
-  setLoginStatus("");
-  setAuthed(true);
-  loadConfig();
+  setLoginStatus("Verification...");
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password, url: "" }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearStoredPassword();
+      setLoginStatus("Mot de passe incorrect.", true);
+      return;
+    }
+    if (res.status === 429) {
+      setLoginStatus("Trop de tentatives. Reessaie plus tard.", true);
+      return;
+    }
+    if (!res.ok && res.status !== 400) {
+      setLoginStatus(payload?.error || "Erreur de verification.", true);
+      return;
+    }
+    storePassword(password);
+    if (refs.password) refs.password.value = "";
+    setLoginStatus("Mot de passe correct.");
+    setAuthed(true);
+    loadConfig();
+  } catch {
+    setLoginStatus("Erreur reseau.", true);
+  }
 }
 
 function handleLogout() {
@@ -133,6 +159,7 @@ async function submitConfig(event) {
       if (res.status === 401) {
         clearStoredPassword();
         setAuthed(false);
+        setLoginStatus("Mot de passe incorrect.", true);
       }
       setStatus(payload?.error || "Mise a jour impossible", true);
       return;
