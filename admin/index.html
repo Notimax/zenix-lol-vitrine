@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../styles.css?v=20260313-c236" />
+  <link rel="stylesheet" href="../styles.css?v=20260313-c237" />
   <style>
     .admin-shell { width: min(880px, 92vw); margin: 40px auto; display: grid; gap: 20px; }
     .admin-grid { display: grid; gap: 20px; }
@@ -38,13 +38,13 @@
 
     <section class="admin-card" id="loginCard">
       <h2>Connexion</h2>
-      <form id="loginForm" class="admin-row" onsubmit="return false;">
+      <form id="loginForm" class="admin-row" onsubmit="return false;" action="javascript:void(0)">
         <div>
           <label for="adminPassword">Mot de passe admin (meme que zenix.best)</label>
           <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Mot de passe" required />
         </div>
         <div class="admin-actions">
-          <button class="btn" type="submit">Acceder</button>
+          <button class="btn" id="loginBtn" type="button">Acceder</button>
         </div>
         <p class="admin-status" id="loginStatus"></p>
       </form>
@@ -63,13 +63,13 @@
 
         <section class="admin-card">
           <h2>Mettre a jour l'URL</h2>
-          <form id="backupForm" class="admin-row" onsubmit="return false;">
+          <form id="backupForm" class="admin-row" onsubmit="return false;" action="javascript:void(0)">
             <div>
               <label for="newUrl">Nouvelle URL active</label>
               <input id="newUrl" type="url" placeholder="https://nouveau-domaine.xyz" required />
             </div>
             <div class="admin-actions">
-              <button class="btn" type="submit">Mettre a jour</button>
+              <button class="btn" id="updateBtn" type="button">Mettre a jour</button>
               <button class="btn" type="button" id="refreshBtn">Recharger</button>
             </div>
             <p class="admin-status" id="formStatus"></p>
@@ -83,6 +83,6 @@
     <span>ZENIX.LOL · Admin</span>
   </footer>
 
-  <script src="admin.js?v=20260313-c236"></script>
+  <script src="admin.js?v=20260313-c237"></script>
 </body>
 </html>

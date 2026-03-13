@@ -13,7 +13,9 @@ const refs = {
   loginCard: document.getElementById("loginCard"),
   loginForm: document.getElementById("loginForm"),
   loginStatus: document.getElementById("loginStatus"),
+  loginBtn: document.getElementById("loginBtn"),
   panel: document.getElementById("adminPanel"),
+  updateBtn: document.getElementById("updateBtn"),
   logoutBtn: document.getElementById("logoutBtn"),
 };
 
@@ -88,7 +90,9 @@ async function loadConfig() {
 }
 
 async function handleLogin(event) {
-  event.preventDefault();
+  if (event?.preventDefault) {
+    event.preventDefault();
+  }
   const password = String(refs.password?.value || "").trim();
   if (!password) {
     setLoginStatus("Mot de passe requis.", true);
@@ -133,7 +137,9 @@ function handleLogout() {
 }
 
 async function submitConfig(event) {
-  event.preventDefault();
+  if (event?.preventDefault) {
+    event.preventDefault();
+  }
   const password = String(getStoredPassword() || "").trim();
   const url = String(refs.newUrl?.value || "").trim();
   if (!password) {
@@ -180,11 +186,34 @@ if (refs.form) {
 if (refs.loginForm) {
   refs.loginForm.addEventListener("submit", handleLogin);
 }
+if (refs.loginBtn) {
+  refs.loginBtn.addEventListener("click", handleLogin);
+}
+if (refs.updateBtn) {
+  refs.updateBtn.addEventListener("click", submitConfig);
+}
 if (refs.refreshBtn) {
   refs.refreshBtn.addEventListener("click", loadConfig);
 }
 if (refs.logoutBtn) {
   refs.logoutBtn.addEventListener("click", handleLogout);
+}
+
+if (refs.password) {
+  refs.password.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleLogin();
+    }
+  });
+}
+if (refs.newUrl) {
+  refs.newUrl.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitConfig();
+    }
+  });
 }
 
 if (getStoredPassword()) {
