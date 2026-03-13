@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../styles.css?v=20260313-c237" />
+  <link rel="stylesheet" href="../styles.css?v=20260314-c238" />
   <style>
     .admin-shell { width: min(880px, 92vw); margin: 40px auto; display: grid; gap: 20px; }
     .admin-grid { display: grid; gap: 20px; }
@@ -83,6 +83,203 @@
     <span>ZENIX.LOL · Admin</span>
   </footer>
 
-  <script src="admin.js?v=20260313-c237"></script>
+  <script src="admin.js?v=20260314-c238"></script>
+  <script>
+    (function () {
+      if (window.__zenixLolAdminReady) return;
+      const API_URL = "https://zenix.best/api/backup-config";
+      const STORAGE_KEY = "zenix_lol_admin_pw";
+      const refs = {
+        loginCard: document.getElementById("loginCard"),
+        panel: document.getElementById("adminPanel"),
+        logoutBtn: document.getElementById("logoutBtn"),
+        loginStatus: document.getElementById("loginStatus"),
+        formStatus: document.getElementById("formStatus"),
+        password: document.getElementById("adminPassword"),
+        newUrl: document.getElementById("newUrl"),
+        loginBtn: document.getElementById("loginBtn"),
+        updateBtn: document.getElementById("updateBtn"),
+        refreshBtn: document.getElementById("refreshBtn"),
+        currentUrl: document.getElementById("currentUrl"),
+        previousUrl: document.getElementById("previousUrl"),
+        lastUpdated: document.getElementById("lastUpdated"),
+      };
+
+      function setAuthed(authed) {
+        if (refs.loginCard) refs.loginCard.hidden = authed;
+        if (refs.panel) refs.panel.hidden = !authed;
+        if (refs.logoutBtn) refs.logoutBtn.hidden = !authed;
+      }
+
+      function setLoginStatus(text, isError) {
+        if (!refs.loginStatus) return;
+        refs.loginStatus.textContent = text || "";
+        refs.loginStatus.style.color = isError ? "#fca5a5" : "#86efac";
+      }
+
+      function setFormStatus(text, isError) {
+        if (!refs.formStatus) return;
+        refs.formStatus.textContent = text || "";
+        refs.formStatus.style.color = isError ? "#fca5a5" : "rgba(226, 232, 240, 0.7)";
+      }
+
+      function getStoredPassword() {
+        return sessionStorage.getItem(STORAGE_KEY) || "";
+      }
+
+      function storePassword(value) {
+        if (value) sessionStorage.setItem(STORAGE_KEY, value);
+      }
+
+      function clearStoredPassword() {
+        sessionStorage.removeItem(STORAGE_KEY);
+      }
+
+      function renderData(data) {
+        if (!data) return;
+        const current = String(data.currentUrl || "").trim();
+        const previous = String(data.previousUrl || "").trim();
+        const updatedAt = Number(data.updatedAt || 0);
+        if (refs.currentUrl) refs.currentUrl.textContent = current || "-";
+        if (refs.previousUrl) {
+          const show = previous && previous !== current;
+          refs.previousUrl.hidden = !show;
+          if (show) refs.previousUrl.textContent = previous;
+        }
+        if (refs.lastUpdated) {
+          if (updatedAt) {
+            refs.lastUpdated.textContent =
+              "Mis a jour · " +
+              new Date(updatedAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+          } else {
+            refs.lastUpdated.textContent = "Mis a jour";
+          }
+        }
+      }
+
+      async function loadConfig() {
+        try {
+          const res = await fetch(API_URL, { cache: "no-store" });
+          if (!res.ok) throw new Error("fetch failed");
+          const payload = await res.json();
+          renderData(payload.data || null);
+        } catch {
+          if (refs.lastUpdated) refs.lastUpdated.textContent = "Impossible de charger";
+        }
+      }
+
+      async function verifyPassword(password) {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password, url: "" }),
+        });
+        if (res.status === 401) return { ok: false, reason: "bad" };
+        if (res.status === 429) return { ok: false, reason: "rate" };
+        if (!res.ok && res.status !== 400) return { ok: false, reason: "error" };
+        return { ok: true };
+      }
+
+      async function handleLogin() {
+        const password = String(refs.password?.value || "").trim();
+        if (!password) {
+          setLoginStatus("Mot de passe requis.", true);
+          return;
+        }
+        setLoginStatus("Verification...");
+        try {
+          const result = await verifyPassword(password);
+          if (!result.ok) {
+            if (result.reason === "rate") {
+              setLoginStatus("Trop de tentatives. Reessaie plus tard.", true);
+            } else if (result.reason === "bad") {
+              clearStoredPassword();
+              setLoginStatus("Mot de passe incorrect.", true);
+            } else {
+              setLoginStatus("Erreur de verification.", true);
+            }
+            return;
+          }
+          storePassword(password);
+          if (refs.password) refs.password.value = "";
+          setLoginStatus("Mot de passe correct.");
+          setAuthed(true);
+          loadConfig();
+        } catch {
+          setLoginStatus("Erreur reseau.", true);
+        }
+      }
+
+      async function handleUpdate() {
+        const password = String(getStoredPassword() || "").trim();
+        const url = String(refs.newUrl?.value || "").trim();
+        if (!password) {
+          setAuthed(false);
+          setFormStatus("Mot de passe requis.", true);
+          return;
+        }
+        if (!url) {
+          setFormStatus("URL obligatoire.", true);
+          return;
+        }
+        setFormStatus("Mise a jour en cours...");
+        try {
+          const res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password, url }),
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok || !payload?.ok) {
+            if (res.status === 401) {
+              clearStoredPassword();
+              setAuthed(false);
+              setLoginStatus("Mot de passe incorrect.", true);
+            }
+            setFormStatus(payload?.error || "Mise a jour impossible", true);
+            return;
+          }
+          renderData(payload.data || null);
+          setFormStatus("Lien mis a jour.");
+          if (refs.newUrl) refs.newUrl.value = "";
+        } catch {
+          setFormStatus("Erreur reseau.", true);
+        }
+      }
+
+      if (refs.loginBtn) refs.loginBtn.addEventListener("click", handleLogin);
+      if (refs.updateBtn) refs.updateBtn.addEventListener("click", handleUpdate);
+      if (refs.refreshBtn) refs.refreshBtn.addEventListener("click", loadConfig);
+      if (refs.password) {
+        refs.password.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            handleLogin();
+          }
+        });
+      }
+      if (refs.newUrl) {
+        refs.newUrl.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            handleUpdate();
+          }
+        });
+      }
+      if (refs.logoutBtn) {
+        refs.logoutBtn.addEventListener("click", () => {
+          clearStoredPassword();
+          setAuthed(false);
+        });
+      }
+
+      if (getStoredPassword()) {
+        setAuthed(true);
+        loadConfig();
+      } else {
+        setAuthed(false);
+      }
+    })();
+  </script>
 </body>
 </html>

@@ -222,3 +222,5 @@ if (getStoredPassword()) {
 } else {
   setAuthed(false);
 }
+
+window.__zenixLolAdminReady = true;
