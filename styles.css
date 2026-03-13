@@ -98,6 +98,16 @@ body {
   word-break: break-all;
 }
 
+.active-url.is-primary {
+  color: var(--text);
+}
+
+.active-url.is-previous {
+  font-size: clamp(0.95rem, 2.6vw, 1.25rem);
+  color: rgba(226, 232, 240, 0.55);
+  text-decoration: line-through;
+}
+
 .btn {
   margin: 6px auto 0;
   display: inline-flex;
