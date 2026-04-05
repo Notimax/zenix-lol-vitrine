@@ -86,6 +86,26 @@ function updateTokenFieldVisibility() {
   refs.githubTokenGroup.hidden = hasToken;
 }
 
+function clearStoredGithubToken() {
+  storeToken("");
+  if (refs.githubToken) {
+    refs.githubToken.value = "";
+  }
+  if (refs.githubTokenGroup) {
+    refs.githubTokenGroup.hidden = false;
+  }
+}
+
+function isGithubAuthErrorMessage(message) {
+  const text = String(message || "").toLowerCase();
+  return (
+    text.includes("bad credentials") ||
+    text.includes("requires authentication") ||
+    text.includes("unauthorized") ||
+    text.includes("resource not accessible by personal access token")
+  );
+}
+
 function renderData(data) {
   currentConfigState = {
     currentUrl: String(data.currentUrl || "").trim(),
@@ -338,7 +358,13 @@ async function submitConfig(event) {
       refs.newUrl.value = "";
     }
   } catch (error) {
-    setStatus(error?.message || "Publication impossible.", true);
+    const message = String(error?.message || "");
+    if (isGithubAuthErrorMessage(message)) {
+      clearStoredGithubToken();
+      setStatus("Session GitHub expiree sur cet appareil. Renseigne de nouveau le token GitHub.", true);
+      return;
+    }
+    setStatus(message || "Publication impossible.", true);
   }
 }
 
