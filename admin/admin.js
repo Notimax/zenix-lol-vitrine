@@ -198,6 +198,7 @@ async function loadConfig() {
 
     const source = await response.text();
     renderData(parseConfigJs(source));
+    setStatus("");
   } catch {
     renderData({
       currentUrl: "",
