@@ -6,6 +6,9 @@ const TOKEN_SUFFIX = "::v1";
 const EMBEDDED_TOKEN_IV = "386BXYwl1FEBRDJQ";
 const EMBEDDED_TOKEN_CIPHER = "Y8eKPi1kjd8180Yya4KdIWPzWz1+8rVmOq28H/On+jGEr9i1WLKW8Q==";
 const EMBEDDED_TOKEN_TAG = "rT/Dxl0VJT/Bzo71kccXMg==";
+const EMBEDDED_DEPLOY_HOOK_IV = "hgBFpoa5l2H/+991";
+const EMBEDDED_DEPLOY_HOOK_CIPHER = "9tokHSXeOBy92O7tEmIA4DEGz0B1TWakwq5Tuoc/xv40vNiJnsbPmbDhVcsrssX444kQWuQkNVk0knwc47r387vuk0xHNA==";
+const EMBEDDED_DEPLOY_HOOK_TAG = "FxvGJV8djeYURC0n3cVyMg==";
 const AUTH_KEY = "zenix_lol_admin_auth";
 const PASSWORD_SESSION_KEY = "zenix_lol_admin_password";
 const CONFIG_URL = new URL("../config.js", window.location.href).toString();
@@ -185,6 +188,38 @@ async function decryptEmbeddedGithubToken(password) {
   }
 }
 
+async function decryptEmbeddedSecret(password, ivValue, cipherValue, tagValue) {
+  const normalized = String(password || "").trim();
+  if (!normalized) {
+    throw new Error("Session admin expiree. Reconnecte-toi.");
+  }
+
+  const keyMaterial = await sha256Bytes(`${TOKEN_SALT}${normalized}${TOKEN_SUFFIX}`);
+  const cryptoKey = await crypto.subtle.importKey("raw", keyMaterial, "AES-GCM", false, ["decrypt"]);
+  const iv = base64ToBytes(ivValue);
+  const cipher = base64ToBytes(cipherValue);
+  const tag = base64ToBytes(tagValue);
+  const payload = new Uint8Array(cipher.length + tag.length);
+  payload.set(cipher, 0);
+  payload.set(tag, cipher.length);
+
+  try {
+    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, payload);
+    return new TextDecoder().decode(decrypted).trim();
+  } catch {
+    throw new Error("Cle de publication indisponible.");
+  }
+}
+
+async function getDeployHookUrl(password) {
+  return decryptEmbeddedSecret(
+    password,
+    EMBEDDED_DEPLOY_HOOK_IV,
+    EMBEDDED_DEPLOY_HOOK_CIPHER,
+    EMBEDDED_DEPLOY_HOOK_TAG
+  );
+}
+
 function githubHeaders(token) {
   return {
     Accept: "application/vnd.github+json",
@@ -212,34 +247,56 @@ async function fetchGithubConfig(token) {
 }
 
 async function pushGithubConfig(token, nextUrl) {
-  const remote = await fetchGithubConfig(token);
-  const previousUrl = remote.parsed.currentUrl || currentConfigState.currentUrl || "";
-  const nextContent = buildConfigFile(nextUrl, previousUrl);
+  let lastMessage = "Publication impossible.";
 
-  const response = await fetch(GITHUB_CONTENTS_URL, {
-    method: "PUT",
-    headers: {
-      ...githubHeaders(token),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message: `update active url to ${nextUrl}`,
-      content: encodeBase64(nextContent),
-      sha: remote.sha,
-      branch: GITHUB_BRANCH,
-    }),
-  });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const remote = await fetchGithubConfig(token);
+    const previousUrl = remote.parsed.currentUrl || currentConfigState.currentUrl || "";
+    const nextContent = buildConfigFile(nextUrl, previousUrl);
 
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(payload?.message || "Publication impossible.");
+    const response = await fetch(GITHUB_CONTENTS_URL, {
+      method: "PUT",
+      headers: {
+        ...githubHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: `update active url to ${nextUrl}`,
+        content: encodeBase64(nextContent),
+        sha: remote.sha,
+        branch: GITHUB_BRANCH,
+      }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      return {
+        currentUrl: nextUrl,
+        previousUrl,
+        updatedAtLabel: "Derniere publication : GitHub mis a jour",
+      };
+    }
+
+    lastMessage = payload?.message || "Publication impossible.";
+    if (attempt === 0 && /does not match/i.test(String(lastMessage))) {
+      continue;
+    }
+    throw new Error(lastMessage);
   }
 
-  return {
-    currentUrl: nextUrl,
-    previousUrl,
-    updatedAtLabel: "Derniere publication : GitHub mis a jour",
-  };
+  throw new Error(lastMessage);
+}
+
+async function triggerRenderDeploy(password) {
+  try {
+    const hookUrl = await getDeployHookUrl(password);
+    await fetch(hookUrl, {
+      method: "POST",
+      mode: "cors",
+    });
+  } catch {
+    // best-effort only
+  }
 }
 
 async function fetchBackendConfig() {
@@ -410,6 +467,7 @@ async function submitConfig(event) {
       const githubToken = await decryptEmbeddedGithubToken(password);
       const nextState = await pushGithubConfig(githubToken, nextUrl);
       renderData(nextState);
+      await triggerRenderDeploy(password);
     }
 
     setStatus("Lien mis a jour. Zenix.lol utilise maintenant cette nouvelle URL.");

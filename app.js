@@ -3,6 +3,7 @@
   const fallbackPrevious = String(window.ZENIX_PREVIOUS_URL || "").trim();
   const fallbackUpdated = String(window.ZENIX_LAST_UPDATED || "").trim();
   const rawConfigUrl = "https://raw.githubusercontent.com/Notimax/zenix-lol-vitrine/main/config.js";
+  const backupApiUrl = "https://zenix.best/api/backup-config";
 
   const urlEl = document.getElementById("activeUrl");
   const oldEl = document.getElementById("previousUrl");
@@ -20,6 +21,17 @@
       previousUrl: previousMatch ? String(previousMatch[1]).trim() : "",
       updatedAtLabel: updatedMatch ? String(updatedMatch[1]).trim() : "",
     };
+  }
+
+  function buildUpdatedLabel(value) {
+    if (!value) {
+      return "";
+    }
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return new Date(numeric).toLocaleString("fr-FR");
+    }
+    return String(value).trim();
   }
 
   function render(payload) {
@@ -51,9 +63,26 @@
     }
   }
 
-  async function refreshFromGitHub() {
+  async function refreshConfig() {
     try {
-      const response = await fetch(`${rawConfigUrl}?cb=${Date.now()}`, { cache: "no-store" });
+      const backendResponse = await fetch(`${backupApiUrl}?cb=${Date.now()}`, {
+        cache: "no-store",
+      });
+      const backendPayload = await backendResponse.json().catch(() => null);
+      if (backendResponse.ok && backendPayload?.data?.currentUrl) {
+        render({
+          currentUrl: String(backendPayload.data.currentUrl || "").trim(),
+          previousUrl: String(backendPayload.data.previousUrl || "").trim(),
+          updatedAtLabel: buildUpdatedLabel(backendPayload.data.updatedAt),
+        });
+        return;
+      }
+    } catch {
+      // fallback below
+    }
+
+    try {
+      let response = await fetch(`${rawConfigUrl}?cb=${Date.now()}`, { cache: "no-store" });
       if (!response.ok) {
         throw new Error("raw config fetch failed");
       }
@@ -63,6 +92,7 @@
         throw new Error("missing current url");
       }
       render(parsed);
+      return;
     } catch {
       render({
         currentUrl: fallbackUrl,
@@ -72,5 +102,5 @@
     }
   }
 
-  refreshFromGitHub();
+  refreshConfig();
 })();
