@@ -1,5 +1,5 @@
 const API_URL = "https://zenix.best/api/backup-config";
-const STORAGE_KEY = "zenix_lol_admin_pw";
+const ADMIN_PASSWORD = "admin1234"; // Mot de passe hardcodé
 
 const refs = {
   currentUrl: document.getElementById("currentUrl"),
@@ -23,20 +23,6 @@ function setAuthed(authed) {
   if (refs.loginCard) refs.loginCard.hidden = authed;
   if (refs.panel) refs.panel.hidden = !authed;
   if (refs.logoutBtn) refs.logoutBtn.hidden = !authed;
-}
-
-function getStoredPassword() {
-  return sessionStorage.getItem(STORAGE_KEY) || "";
-}
-
-function storePassword(value) {
-  if (value) {
-    sessionStorage.setItem(STORAGE_KEY, value);
-  }
-}
-
-function clearStoredPassword() {
-  sessionStorage.removeItem(STORAGE_KEY);
 }
 
 function setStatus(text, isError = false) {
@@ -89,7 +75,7 @@ async function loadConfig() {
   }
 }
 
-async function handleLogin(event) {
+function handleLogin(event) {
   if (event?.preventDefault) {
     event.preventDefault();
   }
@@ -98,59 +84,33 @@ async function handleLogin(event) {
     setLoginStatus("Mot de passe requis.", true);
     return;
   }
-  setLoginStatus("Verification...");
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ password, url: "" }),
-    });
-    const payload = await res.json().catch(() => ({}));
-    if (res.status === 401) {
-      clearStoredPassword();
-      setLoginStatus("Mot de passe incorrect.", true);
-      return;
-    }
-    if (res.status === 429) {
-      setLoginStatus("Trop de tentatives. Reessaie plus tard.", true);
-      return;
-    }
-    if (!res.ok && res.status !== 400) {
-      setLoginStatus(payload?.error || "Erreur de verification.", true);
-      return;
-    }
-    storePassword(password);
-    if (refs.password) refs.password.value = "";
+  
+  // Vérification locale du mot de passe
+  if (password === ADMIN_PASSWORD) {
     setLoginStatus("Mot de passe correct.");
     setAuthed(true);
+    if (refs.password) refs.password.value = "";
     loadConfig();
-  } catch {
-    setLoginStatus("Erreur reseau.", true);
+  } else {
+    setLoginStatus("Mot de passe incorrect.", true);
   }
 }
 
 function handleLogout() {
-  clearStoredPassword();
   setAuthed(false);
+  if (refs.password) refs.password.value = "";
 }
 
 async function submitConfig(event) {
   if (event?.preventDefault) {
     event.preventDefault();
   }
-  const password = String(getStoredPassword() || "").trim();
   const url = String(refs.newUrl?.value || "").trim();
-  if (!password) {
-    setStatus("Mot de passe requis.", true);
-    setAuthed(false);
-    return;
-  }
   if (!url) {
     setStatus("URL obligatoire.", true);
     return;
   }
+  
   setStatus("Mise a jour en cours...");
   try {
     const res = await fetch(API_URL, {
@@ -158,15 +118,10 @@ async function submitConfig(event) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ password, url }),
+      body: JSON.stringify({ password: ADMIN_PASSWORD, url }),
     });
     const payload = await res.json().catch(() => ({}));
     if (!res.ok || !payload?.ok) {
-      if (res.status === 401) {
-        clearStoredPassword();
-        setAuthed(false);
-        setLoginStatus("Mot de passe incorrect.", true);
-      }
       setStatus(payload?.error || "Mise a jour impossible", true);
       return;
     }
@@ -216,11 +171,6 @@ if (refs.newUrl) {
   });
 }
 
-if (getStoredPassword()) {
-  setAuthed(true);
-  loadConfig();
-} else {
-  setAuthed(false);
-}
+setAuthed(false);
 
 window.__zenixLolAdminReady = true;
