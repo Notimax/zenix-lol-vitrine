@@ -1,5 +1,5 @@
-const API_URL = "https://zenix.best/api/backup-config";
-const ADMIN_PASSWORD = "admin1234"; // Mot de passe hardcodé
+const API_URL = "https://zenix.lol/api/backup-config";
+const VERIFY_URL = "https://zenix.lol/api/verify-admin";
 
 const refs = {
   currentUrl: document.getElementById("currentUrl"),
@@ -63,8 +63,24 @@ function renderData(data) {
 }
 
 async function loadConfig() {
+  const token = sessionStorage.getItem("admin_token");
+  if (!token) {
+    setAuthed(false);
+    return;
+  }
+
   try {
-    const res = await fetch(API_URL, { cache: "no-store" });
+    const res = await fetch(API_URL, { 
+      cache: "no-store",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    if (res.status === 401) {
+      sessionStorage.removeItem("admin_token");
+      setAuthed(false);
+      return;
+    }
     if (!res.ok) throw new Error("fetch failed");
     const payload = await res.json();
     renderData(payload.data || null);
@@ -75,7 +91,7 @@ async function loadConfig() {
   }
 }
 
-function handleLogin(event) {
+async function handleLogin(event) {
   if (event?.preventDefault) {
     event.preventDefault();
   }
@@ -85,18 +101,50 @@ function handleLogin(event) {
     return;
   }
   
-  // Vérification locale du mot de passe
-  if (password === ADMIN_PASSWORD) {
-    setLoginStatus("Mot de passe correct.");
-    setAuthed(true);
+  setLoginStatus("Vérification...");
+  
+  try {
+    const res = await fetch(VERIFY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password }),
+    });
+    
+    const payload = await res.json().catch(() => ({}));
+    
+    if (res.status === 401 || !payload.valid) {
+      setLoginStatus("Mot de passe incorrect.", true);
+      return;
+    }
+    
+    if (res.status === 429) {
+      setLoginStatus("Trop de tentatives. Réessaie plus tard.", true);
+      return;
+    }
+    
+    if (!res.ok) {
+      setLoginStatus(payload?.error || "Erreur de vérification.", true);
+      return;
+    }
+    
+    if (payload.token) {
+      sessionStorage.setItem("admin_token", payload.token);
+    }
+    
     if (refs.password) refs.password.value = "";
+    setLoginStatus("Connexion réussie !");
+    setAuthed(true);
     loadConfig();
-  } else {
-    setLoginStatus("Mot de passe incorrect.", true);
+    
+  } catch {
+    setLoginStatus("Erreur réseau.", true);
   }
 }
 
 function handleLogout() {
+  sessionStorage.removeItem("admin_token");
   setAuthed(false);
   if (refs.password) refs.password.value = "";
 }
@@ -105,6 +153,14 @@ async function submitConfig(event) {
   if (event?.preventDefault) {
     event.preventDefault();
   }
+  
+  const token = sessionStorage.getItem("admin_token");
+  if (!token) {
+    setStatus("Session expirée, reconnectez-vous.", true);
+    setAuthed(false);
+    return;
+  }
+  
   const url = String(refs.newUrl?.value || "").trim();
   if (!url) {
     setStatus("URL obligatoire.", true);
@@ -117,11 +173,17 @@ async function submitConfig(event) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify({ password: ADMIN_PASSWORD, url }),
+      body: JSON.stringify({ url }),
     });
     const payload = await res.json().catch(() => ({}));
     if (!res.ok || !payload?.ok) {
+      if (res.status === 401) {
+        sessionStorage.removeItem("admin_token");
+        setAuthed(false);
+        setStatus("Session expirée, reconnectez-vous.", true);
+      }
       setStatus(payload?.error || "Mise a jour impossible", true);
       return;
     }
@@ -131,7 +193,7 @@ async function submitConfig(event) {
       refs.newUrl.value = "";
     }
   } catch {
-    setStatus("Erreur reseau.", true);
+    setStatus("Erreur réseau.", true);
   }
 }
 
