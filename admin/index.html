@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ZENIX Adminn</title>
+  <title>ZENIX Admin</title>
   <meta name="description" content="Admin Zenix.lol" />
   <meta name="robots" content="noindex, nofollow" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -23,6 +23,7 @@
     .admin-links { display: grid; gap: 8px; }
     .admin-links .current { color: var(--text); font-weight: 600; }
     .admin-links .previous { color: rgba(226,232,240,0.55); text-decoration: line-through; }
+    .admin-note { margin: 0; color: rgba(226,232,240,0.72); font-size: 0.86rem; line-height: 1.55; }
   </style>
 </head>
 <body>
@@ -30,9 +31,9 @@
     <header class="hero">
       <p class="eyebrow">ZENIX.LOL</p>
       <h1>ZENIX</h1>
-      <p class="lead">Panneau admin pour mettre a jour le lien actif affiche sur zenix.lol.</p>
+      <p class="lead">Panneau admin pour publier l'URL active de zenix.lol via GitHub.</p>
       <div class="admin-actions">
-        <button class="btn" type="button" id="logoutBtn" hidden>Déconnexion</button>
+        <button class="btn" type="button" id="logoutBtn" hidden>Deconnexion</button>
       </div>
     </header>
 
@@ -68,6 +69,11 @@
               <label for="newUrl">Nouvelle URL active</label>
               <input id="newUrl" type="url" placeholder="https://nouveau-domaine.xyz" required />
             </div>
+            <div>
+              <label for="githubToken">Token GitHub session uniquement</label>
+              <input id="githubToken" type="password" autocomplete="off" placeholder="github_pat_... ou ghp_..." />
+              <p class="admin-note">Le token n'est jamais ecrit dans le code ni stocke durablement. Il sert seulement a publier config.js sur GitHub depuis cette page.</p>
+            </div>
             <div class="admin-actions">
               <button class="btn" id="updateBtn" type="button">Mettre a jour</button>
               <button class="btn" type="button" id="refreshBtn">Recharger</button>
@@ -83,6 +89,6 @@
     <span>ZENIX.LOL · Admin</span>
   </footer>
 
-  <script src="admin.js?v=20260314-c238"></script>
+  <script src="admin.js?v=20260405-c003"></script>
 </body>
 </html>
