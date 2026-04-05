@@ -26,10 +26,10 @@
         <span class="chip">Lien actif du moment</span>
         <span class="status" id="lastUpdated">Lien verifie</span>
       </div>
-      <div class="active-url is-primary" id="activeUrl">https://zenix.best</div>
-      <div class="active-url is-previous" id="previousUrl" hidden>https://ancien-zenix.example</div>
-      <a class="btn" id="activeBtn" href="https://zenix.best" target="_blank" rel="noopener">🎬 ACCEDER AU STREAMING</a>
-      <p class="hint">Lien mis a jour manuellement si changement de domaine.</p>
+      <div class="active-url is-primary" id="activeUrl">Chargement du lien...</div>
+      <div class="active-url is-previous" id="previousUrl" hidden></div>
+      <a class="btn" id="activeBtn" href="#" target="_blank" rel="noopener">🎬 ACCEDER AU STREAMING</a>
+      <p class="hint">Lien mis a jour automatiquement en cas de changement de domaine.</p>
     </section>
 
     <section class="info-grid">
@@ -43,7 +43,7 @@
       <article class="info-card">
         <h2>En cas de blocage</h2>
         <p>
-          Si https://zenix.best ne fonctionne plus :
+          Si <span id="blockedUrlInline">le lien actif</span> ne fonctionne plus :
         </p>
         <ul>
           <li>Reviens sur zenix.lol dans 24-48h.</li>
@@ -58,6 +58,6 @@
     <span>ZENIX.LOL · Site officiel d'acces</span>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20260405-c006"></script>
 </body>
 </html>

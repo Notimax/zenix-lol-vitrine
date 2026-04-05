@@ -4,6 +4,7 @@ const PASSWORD_SUFFIX = "::v1";
 const AUTH_KEY = "zenix_lol_admin_auth";
 const TOKEN_KEY = "zenix_lol_github_token";
 const CONFIG_URL = new URL("../config.js", window.location.href).toString();
+const RAW_CONFIG_URL = "https://raw.githubusercontent.com/Notimax/zenix-lol-vitrine/main/config.js";
 const GITHUB_OWNER = "Notimax";
 const GITHUB_REPO = "zenix-lol-vitrine";
 const GITHUB_BRANCH = "main";
@@ -161,9 +162,15 @@ function isAuthed() {
 
 async function loadConfig() {
   try {
-    const response = await fetch(`${CONFIG_URL}?cb=${Date.now()}`, {
+    let response = await fetch(`${RAW_CONFIG_URL}?cb=${Date.now()}`, {
       cache: "no-store",
     });
+
+    if (!response.ok) {
+      response = await fetch(`${CONFIG_URL}?cb=${Date.now()}`, {
+        cache: "no-store",
+      });
+    }
 
     if (!response.ok) {
       throw new Error("config fetch failed");
@@ -314,6 +321,7 @@ async function submitConfig(event) {
 
   const token = String(refs.githubToken?.value || getStoredToken() || "").trim();
   if (!token) {
+    if (refs.githubTokenGroup) refs.githubTokenGroup.hidden = false;
     setStatus("Token GitHub requis pour publier config.js depuis cette page.", true);
     return;
   }
