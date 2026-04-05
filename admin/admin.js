@@ -17,6 +17,7 @@ const refs = {
   password: document.getElementById("adminPassword"),
   newUrl: document.getElementById("newUrl"),
   githubToken: document.getElementById("githubToken"),
+  githubTokenGroup: document.getElementById("githubTokenGroup"),
   status: document.getElementById("formStatus"),
   refreshBtn: document.getElementById("refreshBtn"),
   loginCard: document.getElementById("loginCard"),
@@ -53,15 +54,35 @@ function setLoginStatus(text, isError = false) {
 }
 
 function getStoredToken() {
-  return sessionStorage.getItem(TOKEN_KEY) || "";
+  try {
+    return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || "";
+  } catch {
+    return sessionStorage.getItem(TOKEN_KEY) || "";
+  }
 }
 
 function storeToken(value) {
-  if (value) {
-    sessionStorage.setItem(TOKEN_KEY, value);
-  } else {
-    sessionStorage.removeItem(TOKEN_KEY);
+  try {
+    if (value) {
+      localStorage.setItem(TOKEN_KEY, value);
+      sessionStorage.setItem(TOKEN_KEY, value);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
+    }
+  } catch {
+    if (value) {
+      sessionStorage.setItem(TOKEN_KEY, value);
+    } else {
+      sessionStorage.removeItem(TOKEN_KEY);
+    }
   }
+}
+
+function updateTokenFieldVisibility() {
+  if (!refs.githubTokenGroup) return;
+  const hasToken = !!getStoredToken();
+  refs.githubTokenGroup.hidden = hasToken;
 }
 
 function renderData(data) {
@@ -185,6 +206,7 @@ async function handleLogin(event) {
     if (refs.githubToken && !refs.githubToken.value && getStoredToken()) {
       refs.githubToken.value = getStoredToken();
     }
+    updateTokenFieldVisibility();
 
     setLoginStatus("Connexion reussie.");
     setAuthed(true);
@@ -202,6 +224,7 @@ function handleLogout() {
   setStatus("");
   if (refs.password) refs.password.value = "";
   if (refs.githubToken) refs.githubToken.value = "";
+  updateTokenFieldVisibility();
 }
 
 function githubHeaders(token) {
@@ -296,6 +319,7 @@ async function submitConfig(event) {
   }
 
   storeToken(token);
+  updateTokenFieldVisibility();
   setStatus("Publication GitHub en cours...");
 
   try {
@@ -355,6 +379,7 @@ if (refs.newUrl) {
 if (refs.githubToken && getStoredToken()) {
   refs.githubToken.value = getStoredToken();
 }
+updateTokenFieldVisibility();
 
 setAuthed(isAuthed());
 if (isAuthed()) {

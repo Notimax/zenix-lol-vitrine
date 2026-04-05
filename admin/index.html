@@ -69,10 +69,10 @@
               <label for="newUrl">Nouvelle URL active</label>
               <input id="newUrl" type="url" placeholder="https://nouveau-domaine.xyz" required />
             </div>
-            <div>
+            <div id="githubTokenGroup">
               <label for="githubToken">Token GitHub session uniquement</label>
               <input id="githubToken" type="password" autocomplete="off" placeholder="github_pat_... ou ghp_..." />
-              <p class="admin-note">Le token n'est jamais ecrit dans le code ni stocke durablement. Il sert seulement a publier config.js sur GitHub depuis cette page.</p>
+              <p class="admin-note">Le token n'est jamais ecrit dans le code. Une fois saisi une premiere fois, il est garde seulement sur ce navigateur pour publier config.js sans le redemander.</p>
             </div>
             <div class="admin-actions">
               <button class="btn" id="updateBtn" type="button">Mettre a jour</button>
