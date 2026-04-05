@@ -248,8 +248,9 @@ async function fetchGithubConfig(token) {
 
 async function pushGithubConfig(token, nextUrl) {
   let lastMessage = "Publication impossible.";
+  const mismatchPattern = /does not match/i;
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
     const remote = await fetchGithubConfig(token);
     const previousUrl = remote.parsed.currentUrl || currentConfigState.currentUrl || "";
     const nextContent = buildConfigFile(nextUrl, previousUrl);
@@ -278,7 +279,8 @@ async function pushGithubConfig(token, nextUrl) {
     }
 
     lastMessage = payload?.message || "Publication impossible.";
-    if (attempt === 0 && /does not match/i.test(String(lastMessage))) {
+    if (mismatchPattern.test(String(lastMessage)) && attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       continue;
     }
     throw new Error(lastMessage);
