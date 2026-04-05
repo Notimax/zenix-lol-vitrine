@@ -1,10 +1,16 @@
 const PASSWORD_HASH = "486c5499c7bfd161f98183a8e732da6b0ba17f9adaadf806d48c9a665e358c0c";
 const PASSWORD_SALT = "zenix-lol-admin::";
 const PASSWORD_SUFFIX = "::v1";
+const TOKEN_SALT = "zenix-lol-token::";
+const TOKEN_SUFFIX = "::v1";
+const EMBEDDED_TOKEN_IV = "386BXYwl1FEBRDJQ";
+const EMBEDDED_TOKEN_CIPHER = "Y8eKPi1kjd8180Yya4KdIWPzWz1+8rVmOq28H/On+jGEr9i1WLKW8Q==";
+const EMBEDDED_TOKEN_TAG = "rT/Dxl0VJT/Bzo71kccXMg==";
 const AUTH_KEY = "zenix_lol_admin_auth";
-const TOKEN_KEY = "zenix_lol_github_token";
+const PASSWORD_SESSION_KEY = "zenix_lol_admin_password";
 const CONFIG_URL = new URL("../config.js", window.location.href).toString();
 const RAW_CONFIG_URL = "https://raw.githubusercontent.com/Notimax/zenix-lol-vitrine/main/config.js";
+const BACKUP_API_URL = "https://zenix.best/api/backup-config";
 const GITHUB_OWNER = "Notimax";
 const GITHUB_REPO = "zenix-lol-vitrine";
 const GITHUB_BRANCH = "main";
@@ -17,8 +23,6 @@ const refs = {
   form: document.getElementById("backupForm"),
   password: document.getElementById("adminPassword"),
   newUrl: document.getElementById("newUrl"),
-  githubToken: document.getElementById("githubToken"),
-  githubTokenGroup: document.getElementById("githubTokenGroup"),
   status: document.getElementById("formStatus"),
   refreshBtn: document.getElementById("refreshBtn"),
   loginCard: document.getElementById("loginCard"),
@@ -54,56 +58,15 @@ function setLoginStatus(text, isError = false) {
   refs.loginStatus.style.color = isError ? "#fca5a5" : "#86efac";
 }
 
-function getStoredToken() {
-  try {
-    return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || "";
-  } catch {
-    return sessionStorage.getItem(TOKEN_KEY) || "";
+function buildUpdatedLabel(value) {
+  if (!value) {
+    return "Config chargee.";
   }
-}
-
-function storeToken(value) {
-  try {
-    if (value) {
-      localStorage.setItem(TOKEN_KEY, value);
-      sessionStorage.setItem(TOKEN_KEY, value);
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-      sessionStorage.removeItem(TOKEN_KEY);
-    }
-  } catch {
-    if (value) {
-      sessionStorage.setItem(TOKEN_KEY, value);
-    } else {
-      sessionStorage.removeItem(TOKEN_KEY);
-    }
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return `Derniere mise a jour : ${new Date(numeric).toLocaleString("fr-FR")}`;
   }
-}
-
-function updateTokenFieldVisibility() {
-  if (!refs.githubTokenGroup) return;
-  const hasToken = !!getStoredToken();
-  refs.githubTokenGroup.hidden = hasToken;
-}
-
-function clearStoredGithubToken() {
-  storeToken("");
-  if (refs.githubToken) {
-    refs.githubToken.value = "";
-  }
-  if (refs.githubTokenGroup) {
-    refs.githubTokenGroup.hidden = false;
-  }
-}
-
-function isGithubAuthErrorMessage(message) {
-  const text = String(message || "").toLowerCase();
-  return (
-    text.includes("bad credentials") ||
-    text.includes("requires authentication") ||
-    text.includes("unauthorized") ||
-    text.includes("resource not accessible by personal access token")
-  );
+  return `Derniere publication : ${String(value).trim()}`;
 }
 
 function renderData(data) {
@@ -122,9 +85,7 @@ function renderData(data) {
       currentConfigState.previousUrl &&
       currentConfigState.previousUrl !== currentConfigState.currentUrl;
     refs.previousUrl.hidden = !showPrevious;
-    if (showPrevious) {
-      refs.previousUrl.textContent = currentConfigState.previousUrl;
-    }
+    refs.previousUrl.textContent = showPrevious ? currentConfigState.previousUrl : "";
   }
 
   if (refs.lastUpdated) {
@@ -145,6 +106,10 @@ function parseConfigJs(source) {
   };
 }
 
+function base64ToBytes(value) {
+  return Uint8Array.from(atob(String(value || "")), (char) => char.charCodeAt(0));
+}
+
 function encodeBase64(value) {
   return btoa(unescape(encodeURIComponent(value)));
 }
@@ -163,10 +128,15 @@ function buildConfigFile(nextUrl, previousUrl) {
   ].join("\n");
 }
 
-async function sha256Hex(value) {
+async function sha256Bytes(value) {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest))
+  return new Uint8Array(digest);
+}
+
+async function sha256Hex(value) {
+  const digest = await sha256Bytes(value);
+  return Array.from(digest)
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
@@ -180,79 +150,39 @@ function isAuthed() {
   return sessionStorage.getItem(AUTH_KEY) === "1";
 }
 
-async function loadConfig() {
-  try {
-    let response = await fetch(`${RAW_CONFIG_URL}?cb=${Date.now()}`, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      response = await fetch(`${CONFIG_URL}?cb=${Date.now()}`, {
-        cache: "no-store",
-      });
-    }
-
-    if (!response.ok) {
-      throw new Error("config fetch failed");
-    }
-
-    const source = await response.text();
-    renderData(parseConfigJs(source));
-    setStatus("");
-  } catch {
-    renderData({
-      currentUrl: "",
-      previousUrl: "",
-      updatedAtLabel: "Impossible de charger config.js",
-    });
-  }
-}
-
-async function handleLogin(event) {
-  if (event?.preventDefault) {
-    event.preventDefault();
-  }
-
-  const password = String(refs.password?.value || "").trim();
+function storeSessionPassword(password) {
   if (!password) {
-    setLoginStatus("Mot de passe requis.", true);
+    sessionStorage.removeItem(PASSWORD_SESSION_KEY);
     return;
   }
-
-  setLoginStatus("Verification...");
-
-  try {
-    const valid = await verifyPassword(password);
-    if (!valid) {
-      sessionStorage.removeItem(AUTH_KEY);
-      setLoginStatus("Mot de passe incorrect.", true);
-      return;
-    }
-
-    sessionStorage.setItem(AUTH_KEY, "1");
-    if (refs.password) refs.password.value = "";
-    if (refs.githubToken && !refs.githubToken.value && getStoredToken()) {
-      refs.githubToken.value = getStoredToken();
-    }
-    updateTokenFieldVisibility();
-
-    setLoginStatus("Connexion reussie.");
-    setAuthed(true);
-    setStatus("");
-    await loadConfig();
-  } catch {
-    setLoginStatus("Erreur de verification.", true);
-  }
+  sessionStorage.setItem(PASSWORD_SESSION_KEY, password);
 }
 
-function handleLogout() {
-  sessionStorage.removeItem(AUTH_KEY);
-  storeToken("");
-  setAuthed(false);
-  setStatus("");
-  if (refs.password) refs.password.value = "";
-  if (refs.githubToken) refs.githubToken.value = "";
-  updateTokenFieldVisibility();
+function getSessionPassword() {
+  return String(sessionStorage.getItem(PASSWORD_SESSION_KEY) || "");
+}
+
+async function decryptEmbeddedGithubToken(password) {
+  const normalized = String(password || "").trim();
+  if (!normalized) {
+    throw new Error("Session admin expiree. Reconnecte-toi.");
+  }
+
+  const keyMaterial = await sha256Bytes(`${TOKEN_SALT}${normalized}${TOKEN_SUFFIX}`);
+  const cryptoKey = await crypto.subtle.importKey("raw", keyMaterial, "AES-GCM", false, ["decrypt"]);
+  const iv = base64ToBytes(EMBEDDED_TOKEN_IV);
+  const cipher = base64ToBytes(EMBEDDED_TOKEN_CIPHER);
+  const tag = base64ToBytes(EMBEDDED_TOKEN_TAG);
+  const payload = new Uint8Array(cipher.length + tag.length);
+  payload.set(cipher, 0);
+  payload.set(tag, cipher.length);
+
+  try {
+    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, payload);
+    return new TextDecoder().decode(decrypted).trim();
+  } catch {
+    throw new Error("Cle de publication indisponible.");
+  }
 }
 
 function githubHeaders(token) {
@@ -270,7 +200,7 @@ async function fetchGithubConfig(token) {
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload?.message || "Impossible de lire config.js depuis GitHub.");
+    throw new Error(payload?.message || "Impossible de lire config.js.");
   }
 
   const source = decodeBase64(String(payload.content || ""));
@@ -301,16 +231,114 @@ async function pushGithubConfig(token, nextUrl) {
   });
 
   const payload = await response.json().catch(() => ({}));
-
   if (!response.ok) {
-    throw new Error(payload?.message || "Publication GitHub impossible.");
+    throw new Error(payload?.message || "Publication impossible.");
   }
 
   return {
     currentUrl: nextUrl,
     previousUrl,
-    updatedAtLabel: "Publication GitHub envoyee. Render peut prendre 1 a 2 minutes.",
+    updatedAtLabel: "Derniere publication : GitHub mis a jour",
   };
+}
+
+async function fetchBackendConfig() {
+  const response = await fetch(`${BACKUP_API_URL}?cb=${Date.now()}`, {
+    cache: "no-store",
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.data?.currentUrl) {
+    throw new Error(payload?.error || "Backend indisponible");
+  }
+  return {
+    currentUrl: String(payload.data.currentUrl || "").trim(),
+    previousUrl: String(payload.data.previousUrl || "").trim(),
+    updatedAtLabel: buildUpdatedLabel(payload.data.updatedAt),
+  };
+}
+
+async function fetchFallbackConfig() {
+  let response = await fetch(`${RAW_CONFIG_URL}?cb=${Date.now()}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    response = await fetch(`${CONFIG_URL}?cb=${Date.now()}`, {
+      cache: "no-store",
+    });
+  }
+
+  if (!response.ok) {
+    throw new Error("config fetch failed");
+  }
+
+  const source = await response.text();
+  return parseConfigJs(source);
+}
+
+async function loadConfig() {
+  try {
+    const backendData = await fetchBackendConfig();
+    renderData(backendData);
+    setStatus("");
+    return;
+  } catch {
+    try {
+      const fallback = await fetchFallbackConfig();
+      renderData(fallback);
+      setStatus("");
+      return;
+    } catch {
+      renderData({
+        currentUrl: "",
+        previousUrl: "",
+        updatedAtLabel: "Impossible de charger la configuration",
+      });
+    }
+  }
+}
+
+async function handleLogin(event) {
+  if (event?.preventDefault) {
+    event.preventDefault();
+  }
+
+  const password = String(refs.password?.value || "").trim();
+  if (!password) {
+    setLoginStatus("Mot de passe requis.", true);
+    return;
+  }
+
+  setLoginStatus("Verification...");
+
+  try {
+    const valid = await verifyPassword(password);
+    if (!valid) {
+      sessionStorage.removeItem(AUTH_KEY);
+      storeSessionPassword("");
+      setLoginStatus("Mot de passe incorrect.", true);
+      return;
+    }
+
+    sessionStorage.setItem(AUTH_KEY, "1");
+    storeSessionPassword(password);
+    if (refs.password) refs.password.value = "";
+
+    setLoginStatus("Connexion reussie.");
+    setAuthed(true);
+    setStatus("");
+    await loadConfig();
+  } catch {
+    setLoginStatus("Erreur de verification.", true);
+  }
+}
+
+function handleLogout() {
+  sessionStorage.removeItem(AUTH_KEY);
+  storeSessionPassword("");
+  setAuthed(false);
+  setStatus("");
+  if (refs.password) refs.password.value = "";
 }
 
 async function submitConfig(event) {
@@ -340,32 +368,56 @@ async function submitConfig(event) {
     return;
   }
 
-  const token = String(refs.githubToken?.value || getStoredToken() || "").trim();
-  if (!token) {
-    if (refs.githubTokenGroup) refs.githubTokenGroup.hidden = false;
-    setStatus("Token GitHub requis pour publier config.js depuis cette page.", true);
+  const password = getSessionPassword();
+  if (!password) {
+    sessionStorage.removeItem(AUTH_KEY);
+    setAuthed(false);
+    setStatus("Session admin expiree. Reconnecte-toi.", true);
     return;
   }
 
-  storeToken(token);
-  updateTokenFieldVisibility();
-  setStatus("Publication GitHub en cours...");
+  setStatus("Mise a jour en cours...");
 
   try {
-    const nextState = await pushGithubConfig(token, nextUrl);
-    renderData(nextState);
-    setStatus("Lien publie sur GitHub. Si Render n'auto-deploie pas, lance un manual update.");
+    let published = false;
+
+    try {
+      const response = await fetch(BACKUP_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          password,
+          url: nextUrl,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (response.ok && payload?.data?.currentUrl) {
+        renderData({
+          currentUrl: String(payload.data.currentUrl || "").trim(),
+          previousUrl: String(payload.data.previousUrl || "").trim(),
+          updatedAtLabel: buildUpdatedLabel(payload.data.updatedAt),
+        });
+        published = true;
+      }
+    } catch {
+      // fallback below
+    }
+
+    if (!published) {
+      const githubToken = await decryptEmbeddedGithubToken(password);
+      const nextState = await pushGithubConfig(githubToken, nextUrl);
+      renderData(nextState);
+    }
+
+    setStatus("Lien mis a jour. Zenix.lol utilise maintenant cette nouvelle URL.");
     if (refs.newUrl) {
       refs.newUrl.value = "";
     }
   } catch (error) {
-    const message = String(error?.message || "");
-    if (isGithubAuthErrorMessage(message)) {
-      clearStoredGithubToken();
-      setStatus("Session GitHub expiree sur cet appareil. Renseigne de nouveau le token GitHub.", true);
-      return;
-    }
-    setStatus(message || "Publication impossible.", true);
+    setStatus(String(error?.message || "Mise a jour impossible."), true);
   }
 }
 
@@ -410,11 +462,6 @@ if (refs.newUrl) {
     }
   });
 }
-
-if (refs.githubToken && getStoredToken()) {
-  refs.githubToken.value = getStoredToken();
-}
-updateTokenFieldVisibility();
 
 setAuthed(isAuthed());
 if (isAuthed()) {
