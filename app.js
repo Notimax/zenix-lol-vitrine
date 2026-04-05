@@ -47,7 +47,7 @@
     }
 
     if (status) {
-      status.textContent = updatedAtLabel ? `Lien verifie · ${updatedAtLabel}` : "Lien verifie";
+      status.textContent = updatedAtLabel ? `Lien verifie - ${updatedAtLabel}` : "Lien verifie";
     }
   }
 
@@ -64,15 +64,13 @@
       }
       render(parsed);
     } catch {
-      render(null);
+      render({
+        currentUrl: fallbackUrl,
+        previousUrl: fallbackPrevious,
+        updatedAtLabel: fallbackUpdated,
+      });
     }
   }
-
-  render({
-    currentUrl: fallbackUrl,
-    previousUrl: fallbackPrevious,
-    updatedAtLabel: fallbackUpdated,
-  });
 
   refreshFromGitHub();
 })();
