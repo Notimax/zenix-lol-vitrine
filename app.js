@@ -65,18 +65,7 @@
          status.innerHTML = `<span class="ping-dot" id="pingDot"></span><span id="statusText">Verification...</span>`;
       }
     }
-    
-    // Check if new badge should be shown (less than 24h)
-    const newBadge = document.getElementById("newBadge");
-    if (newBadge && payload?.updatedAtLabel) {
-      const parts = payload.updatedAtLabel.split("-");
-      if (parts.length === 3) {
-        const d = new Date(parts[0], parts[1]-1, parts[2]);
-        if (Date.now() - d.getTime() < 86400000) {
-           newBadge.style.display = "inline-block";
-        }
-      }
-    }
+
 
     // Ping check
     if (current && current.startsWith("http")) {
