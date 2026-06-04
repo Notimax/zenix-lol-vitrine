@@ -59,8 +59,55 @@
     }
 
     if (status) {
-      status.textContent = updatedAtLabel ? `Lien verifie - ${updatedAtLabel}` : "Lien verifie";
+      if (updatedAtLabel) {
+         status.innerHTML = `<span class="ping-dot" id="pingDot"></span><span id="statusText">Verification...</span>`;
+      } else {
+         status.innerHTML = `<span class="ping-dot" id="pingDot"></span><span id="statusText">Verification...</span>`;
+      }
     }
+    
+    // Check if new badge should be shown (less than 24h)
+    const newBadge = document.getElementById("newBadge");
+    if (newBadge && payload?.updatedAtLabel) {
+      const parts = payload.updatedAtLabel.split("-");
+      if (parts.length === 3) {
+        const d = new Date(parts[0], parts[1]-1, parts[2]);
+        if (Date.now() - d.getTime() < 86400000) {
+           newBadge.style.display = "inline-block";
+        }
+      }
+    }
+
+    // Ping check
+    if (current && current.startsWith("http")) {
+       checkPing(current);
+    }
+  }
+
+  async function checkPing(url) {
+    const pingDot = document.getElementById("pingDot");
+    const statusText = document.getElementById("statusText");
+    if(!pingDot || !statusText) return;
+    try {
+       await fetch(url + "/radar.json?t=" + Date.now(), { mode: 'no-cors' });
+       pingDot.className = "ping-dot online";
+       statusText.textContent = "En ligne";
+    } catch(e) {
+       pingDot.className = "ping-dot offline";
+       statusText.textContent = "Ralentissements";
+    }
+  }
+  
+  const copyBtn = document.getElementById("copyBtn");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      if (urlEl && urlEl.textContent) {
+        navigator.clipboard.writeText(urlEl.textContent).then(() => {
+          copyBtn.classList.add("copied");
+          setTimeout(() => copyBtn.classList.remove("copied"), 1500);
+        });
+      }
+    });
   }
 
   async function refreshConfig() {

@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
@@ -23,14 +23,33 @@
 
     <section class="active-link">
       <div class="active-head">
+        <span class="chip" id="newBadge" style="display: none; background: rgba(239, 68, 68, 0.2); color: #fca5a5; box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);">🚨 NOUVEAU</span>
         <span class="chip">Lien actif du moment</span>
-        <span class="status" id="lastUpdated">Lien verifie</span>
+        <span class="status" id="lastUpdated">
+          <span class="ping-dot" id="pingDot"></span>
+          <span id="statusText">Verification...</span>
+        </span>
       </div>
-      <div class="active-url is-primary" id="activeUrl">Chargement du lien...</div>
+      <div class="active-url-wrapper">
+        <div class="active-url is-primary" id="activeUrl">Chargement du lien...</div>
+        <button class="copy-btn" id="copyBtn" aria-label="Copier le lien" title="Copier">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
       <div class="active-url is-previous" id="previousUrl" hidden></div>
-      <a class="btn" id="activeBtn" href="#" target="_blank" rel="noopener">🎬 ACCEDER AU STREAMING</a>
+      <a class="btn premium-btn" id="activeBtn" href="#" target="_blank" rel="noopener">
+        🎬 ACCEDER AU STREAMING
+        <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </a>
       <p class="hint">Lien mis a jour automatiquement en cas de changement de domaine.</p>
     </section>
+
+    <div class="social-links">
+      <a href="https://t.me/zenixstream" class="social-btn telegram" target="_blank" rel="noopener">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-17.5 7.5a2.25 2.25 0 0 0 .12 4.148l4.47 1.543 2.193 6.903a2.25 2.25 0 0 0 4.116.48l3.665-6.524 5.378 4.298a2.25 2.25 0 0 0 3.633-1.611l2.5-16.5a2.25 2.25 0 0 0-2.55-2.552z"></path><path d="M7.77 15.333l4.63-4.63"></path></svg>
+        Rejoindre la communaute
+      </a>
+    </div>
 
     <section class="info-grid">
       <article class="info-card">
